@@ -44,18 +44,24 @@ df.createOrReplaceTempView("widok") # tworzenie widoku danych, krok potrzebny do
 # cwiczenia
 df = df.filter("repo_date = '2020-11-20'")
 
+
 df = df.withColumn("segment", f.when(f.col("income") < 4000, "LOW")
                               .when(f.col("income") < 7000, "MEDIUM")
                               .otherwise("HIGH"))
+
 
 window = Window.partitionBy("Account").orderBy(f.col("repo_date").desc())
 
 df = df.withColumn("row_num", f.row_number().over(window))\
   .filter(f.col("row_num") == 1).drop("row_num")
 
+
 cols_list = df.select("Fund Description").distinct().limit(10).rdd.flatMap(lambda x: x).collect()
 
 value = df.select("Fund Description").first()
+
+
+df.select("age", "weight", "height").summary("count", "min", "25%", "75%", "max").show()
 
 #~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
 
