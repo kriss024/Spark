@@ -38,24 +38,30 @@ df.printSchema()
 
 df.toPandas().head(20)
 
+# hive  zapisanie wyniku na hive
+df.createOrReplaceTempView("widok") # tworzenie widoku danych, krok potrzebny do zapisania na hive, -> do zoptymalizowania aby zapis był bez tego
+
 # cwiczenia
 df = df.filter("repo_date = '2020-11-20'")
 
-df = df.withColumn("when_col", f.when((f.col("State") =='NC') | (f.col("State") =='NE'), 1).otherwise(None))
+df = df.withColumn("segment", f.when(f.col("income") < 4000, "LOW")
+                              .when(f.col("income") < 7000, "MEDIUM")
+                              .otherwise("HIGH"))
 
 window = Window.partitionBy("Account").orderBy(f.col("repo_date").desc())
 
-df.withColumn("rn", f.row_number().over(w2))\
-  .filter(f.col("rn") == 1).drop("row")
+df = df.withColumn("row_num", f.row_number().over(window))\
+  .filter(f.col("row_num") == 1).drop("row_num")
 
-#hive  zapisanie wyniku na hive
-df.createOrReplaceTempView("widok") # tworzenie widoku danych, krok potrzebny do zapisania na hive, -> do zoptymalizowania aby zapis był bez tego
+cols_list = df.select("Fund Description").distinct().limit(10).rdd.flatMap(lambda x: x).collect()
+
+value = df.select("Fund Description").first()
 
 #~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
 
 spark.sql(f"DROP TABLE IF EXISTS {table_name}")
 
-#table partitioning: "orc", "parquet", or "hive"
+# table partitioning: "orc", "parquet", or "hive"
 df.coalesce(1).write.mode("overwrite").format("parquet").saveAsTable(table_name)
 
 df.write.partitionBy("repo_date").mode("overwrite").format("orc").saveAsTable(table_name)
