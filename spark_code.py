@@ -38,28 +38,43 @@ df.printSchema()
 
 df.toPandas().head(20)
 
+#~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+
 # hive  zapisanie wyniku na hive
 df.createOrReplaceTempView("widok") # tworzenie widoku danych, krok potrzebny do zapisania na hive, -> do zoptymalizowania aby zapis był bez tego
 
 # cwiczenia
-df = df.filter("repo_date = '2020-11-20'")
+df = df.withColumn("tax", col("salary") * 0.1)
 
+df = df.filter("repo_date = '2020-11-20'")
 
 df = df.withColumn("segment", f.when(f.col("income") < 4000, "LOW")
                               .when(f.col("income") < 7000, "MEDIUM")
                               .otherwise("HIGH"))
 
+#~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
 
 window = Window.partitionBy("Account").orderBy(f.col("repo_date").desc())
 
 df = df.withColumn("row_num", f.row_number().over(window))\
   .filter(f.col("row_num") == 1).drop("row_num")
 
+#~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
+
+from functools import reduce
+from pyspark.sql import DataFrame
+
+list_of_dfs = [df1, df2, df3, df4]
+df_combined = reduce(DataFrame.union, list_of_dfs)
+df_combined = reduce(DataFrame.unionByName, list_of_dfs)
+
+#~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
 
 cols_list = df.select("Fund Description").distinct().limit(10).rdd.flatMap(lambda x: x).collect()
 
 value = df.select("Fund Description").first()
 
+#~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
 
 df.select("age", "weight", "height").summary("count", "min", "25%", "75%", "max").show()
 
