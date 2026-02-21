@@ -139,9 +139,11 @@ df = reduce(DataFrame.unionByName, list_of_dfs)
 spark.sql(f"DROP TABLE IF EXISTS {table_name}")
 
 # rodzaje partycji na hive: "orc", "parquet", or "hive"
-df.coalesce(1).write.mode("overwrite").format("parquet").saveAsTable(table_name)
-
 df.write.partitionBy("repo_date").mode("overwrite").format("orc").saveAsTable(table_name)
+
+df.coalesce(1).write.format("parquet").mode("overwrite").save("my_data.parquet")
+
+df.coalesce(1).write.mode("overwrite").option("header", True).option('sep',',').csv("my_data.csv")
 
 #~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
 
